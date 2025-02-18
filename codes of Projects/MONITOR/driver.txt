@@ -1,0 +1,49 @@
+class monitor;
+  virtual fifo_if vif;
+  mailbox #(transactor) rcvr2sb;
+  
+  function new(virtual fifo_if vif, mailbox #(transactor) rcvr2sb);
+    this.vif = vif;
+    if (rcvr2sb == null) begin
+      $finish;
+    end else begin
+      this.rcvr2sb = rcvr2sb;
+    end
+  endfunction : new
+
+  task start();
+    fork
+      forever begin
+        transactor trans;
+        trans = new();
+        $display("===========Mode of operation=========");
+        @(posedge vif.MONITOR.clk);
+        wait(vif.MONITOR.monitor.rd_en || vif.MONITOR.monitor.wr_en);
+        
+        @(posedge vif.MONITOR.clk);
+        if (vif.MONITOR.monitor.wr_en) begin
+          trans.wr_en = vif.MONITOR.monitor.wr_en;
+          trans.rd_en = vif.MONITOR.monitor.rd_en;
+          trans.wdata = vif.MONITOR.monitor.wdata;
+          trans.full = vif.MONITOR.monitor.full;
+          trans.empty = vif.MONITOR.monitor.empty;
+          if (trans.empty)
+            $display("\wr_en=%h Memory is Full", vif.MONITOR.monitor.wr_en);
+          else
+            $display("\wr_en=%h \rdata=%h", vif.MONITOR.monitor.wr_en, vif.MONITOR.monitor.wdata);
+        end else begin
+          trans.rd_en = vif.MONITOR.monitor.rd_en;
+          trans.wr_en = vif.MONITOR.monitor.wr_en;
+          trans.rdata = vif.MONITOR.monitor.wdata;
+          trans.full = vif.MONITOR.monitor.full;
+          trans.empty = vif.MONITOR.monitor.empty;
+          if (trans.empty)
+            $display("\rd_en=%h Memory is Empty", vif.MONITOR.monitor.rd_en);
+          else
+            $display("\rd_en=%h \rdata=%h", vif.MONITOR.monitor.rd_en, vif.MONITOR.monitor.rdata);
+        end
+        rcvr2sb.put(trans);
+      end
+    join_none
+  endtask : start
+endclass

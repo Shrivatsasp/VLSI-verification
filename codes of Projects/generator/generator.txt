@@ -1,0 +1,21 @@
+class generator;
+  rand transactor trans;          // Transaction object of type transactor
+  mailbox #(transactor) gen2driv; // Mailbox for communication
+  int repeat_count;               // Number of transactions to generate
+  int count;                      // Counter
+
+  // Constructor
+  function new(mailbox #(transactor) gen2driv);
+    this.gen2driv = gen2driv;  // Initialize mailbox
+  endfunction
+
+  // Main task to generate transactions
+  task main();
+    repeat(repeat_count) begin
+      trans = new();            // Create a new transactor object
+      trans.randomize();        // Randomize the transaction fields
+      gen2driv.put(trans);      // Send the transaction to the mailbox
+    end
+  endtask
+endclass
+

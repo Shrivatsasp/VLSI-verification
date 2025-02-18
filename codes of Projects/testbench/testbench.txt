@@ -1,0 +1,45 @@
+`include "test.sv"
+`include "inf_fifo.sv"
+module tb_top();
+  bit clk;
+  fifo_if inf(clk);    // Create FIFO interface
+  test t1(inf);        // Instantiate testbench
+
+  fifo dut (
+    .wdata(inf.wdata),
+    .rd_en(inf.rd_en),
+    .wr_en(inf.wr_en),
+    .full(inf.full),
+    .empty(inf.empty),
+    .rdata(inf.rdata),
+    .clk(clk)
+  );
+
+  initial begin
+    clk = 1;
+  end
+
+  always #5 clk = ~clk;  // Clock generation
+  
+  initial begin
+    $dumpfile("dump.vcd");  // Enable VCD dump for waveform viewing
+    $dumpvars;
+  end
+endmodule
+
+
+test.sv
+`include "environment.sv"
+program test(fifo_if inf);
+  environment env;
+  initial begin
+    env = new(inf);         // Create environment with the FIFO interface
+    env.build();            // Build the environment setup
+    env.gen.repeat_count = 40;  // Set the repeat count for transactions
+    env.test();             // Start the test execution
+    env.run();              // Run the testbench
+  end
+endprogram
+
+
+

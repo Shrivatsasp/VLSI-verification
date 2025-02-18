@@ -1,0 +1,46 @@
+ class scoreboard;
+  mailbox #(transactor) gen2driv;  // Use mailbox with correct type
+  mailbox #(transactor) rcvr2sb;   // Use mailbox with correct type
+  integer compare;
+
+  function new(mailbox #(transactor) gen2driv, mailbox #(transactor) rcvr2sb);
+    this.gen2driv = gen2driv;
+    this.rcvr2sb = rcvr2sb;
+  endfunction : new
+
+  task start();
+    transactor trans_rcv, trans;
+    trans_rcv = new();
+    trans = new();
+    fork
+      forever begin
+        rcvr2sb.get(trans_rcv);  // Get transaction from receiver mailbox
+        gen2driv.get(trans);     // Get transaction from sender mailbox
+        $display("======== Scoreboard ========");
+        compare = 1'b0;
+        
+        if (trans.wr_en == trans_rcv.wr_en && trans.rd_en == trans_rcv.rd_en)
+          compare = 1'b1;
+        
+        if (trans_rcv.full || trans_rcv.empty) begin
+          if (trans_rcv.full)
+            $display("wr_en=%0h Memory is Full", trans_rcv.wr_en);
+          else
+            $display("wr_en=%0h wdata=%0h", trans_rcv.wr_en, trans_rcv.wdata);
+        end
+        
+        if (trans_rcv.empty)
+          $display("rd_en=%0h Memory is Empty", trans_rcv.rd_en);
+        else
+          $display("rd_en=%0h rdata=%0h", trans_rcv.rd_en, trans_rcv.rdata);
+        
+        if (compare == 1)
+          $display("Yes");
+        else
+          $display("No");
+      end
+    join_none
+  endtask : start
+endclass
+
+

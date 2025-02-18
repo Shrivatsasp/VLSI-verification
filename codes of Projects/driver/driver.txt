@@ -1,0 +1,42 @@
+class driver;
+  virtual fifo_if vif;
+  mailbox #(transactor) gen2driv;
+  
+  function new (virtual fifo_if vif, mailbox #(transactor) gen2driv);
+    this.vif = vif;
+    this.gen2driv = gen2driv;
+  endfunction
+
+  task reset();
+    vif.DRIVER.driver_cb.rst <= 1;
+    repeat (40) @(posedge vif.DRIVER.clk);
+    vif.DRIVER.driver_cb.rst <= 0;
+  endtask : reset
+
+  task main();
+    fork : main
+      forever begin
+        transactor trans;
+        trans = new();
+        gen2driv.get(trans);
+        @(posedge vif.DRIVER.clk);
+        
+        if (trans.wr_en || trans.rd_en) begin
+          if (trans.wr_en) begin
+            vif.DRIVER.driver_cb.wr_en <= trans.wr_en;
+            vif.DRIVER.driver_cb.rd_en <= trans.rd_en;
+            vif.DRIVER.driver_cb.wdata <= trans.wdata;
+            @(posedge vif.DRIVER.clk);
+          end 
+          else 
+            begin
+            vif.DRIVER.driver_cb.wr_en <= trans.wr_en;
+            vif.DRIVER.driver_cb.rd_en <= trans.rd_en;
+            trans.rdata = vif.MONITOR.monitor.rdata;
+            @(posedge vif.DRIVER.clk);
+          end
+        end
+      end
+    join_none : main
+  endtask
+endclass
